@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>活動遊程定價試算器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Chart.js in <head> with defer — DOM will be ready before it executes -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #faf5f2;
+  --bg2:      #f3ebe5;
+  --card:     #ffffff;
+  --border:   #e8ddd7;
+  --border2:  #d4c8c0;
+  --text:     #2a2018;
+  --text2:    #7a6a60;
+  --text3:    #b0a098;
+  --sage:     #7a9e8e;
+  --sage-dk:  #5a7e6e;
+  --sage-lt:  #c8ddd5;
+  --sage-bg:  #eef5f1;
+  --pink:     #e8b4a0;
+  --pink-dk:  #c8836a;
+  --pink-lt:  #f5ddd5;
+  --pink-bg:  #fdf1ec;
+  --warn:     #c8824a;
+  --danger:   #b84848;
+  --shadow:   0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+  --r:        14px;
+  --r-sm:     8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+/* HEADER */
+.page-header { background: var(--sage-dk); color: #fff; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 200; box-shadow: 0 2px 12px rgba(90,126,110,0.28); flex-wrap: wrap; }
+.header-brand h1 { font-size: 15px; font-weight: 700; }
+.header-brand p  { font-size: 10px; opacity: 0.65; }
+.header-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.saved-chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.saved-chip { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; background: rgba(255,255,255,0.18); color: #fff; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); display: flex; align-items: center; gap: 4px; transition: background 0.15s; }
+.saved-chip:hover { background: rgba(255,255,255,0.28); }
+.saved-chip-del { opacity: 0.55; font-size: 13px; line-height: 1; cursor: pointer; }
+.saved-chip-del:hover { opacity: 1; }
+.hd { width: 1px; height: 18px; background: rgba(255,255,255,0.25); margin: 0 2px; }
+
+/* BUTTONS */
+.btn { padding: 6px 13px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 500; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+.btn-white  { background: #fff; color: var(--sage-dk); }
+.btn-white:hover  { background: var(--sage-bg); }
+.btn-ghost  { background: var(--bg); color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover  { background: var(--bg2); }
+.btn-del    { background: transparent; color: var(--text3); border: none; padding: 3px 6px; font-size: 14px; border-radius: 4px; cursor: pointer; line-height: 1; }
+.btn-del:hover    { background: #fde8e8; color: var(--danger); }
+.btn-add    { display: block; width: 100%; padding: 9px; margin-top: 8px; border-radius: 6px; background: transparent; color: var(--sage-dk); border: 1px dashed var(--sage-lt); font-size: 12px; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+.btn-add:hover    { background: var(--sage-bg); }
+
+/* LAYOUT */
+.container { max-width: 1160px; margin: 0 auto; padding: 24px 20px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+section { margin-bottom: 22px; }
+.sec-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.sec-lbl::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* CARD */
+.card { background: var(--card); border-radius: var(--r); border: 1px solid var(--border); padding: 20px; box-shadow: var(--shadow); }
+.card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* FORM */
+.form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; }
+.form-row:last-child { margin-bottom: 0; }
+.form-row label { font-size: 11px; font-weight: 600; color: var(--text2); }
+.form-row input, .form-row select { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 14px; font-family: inherit; background: var(--bg); color: var(--text); transition: all 0.15s; width: 100%; }
+.form-row input:focus, .form-row select:focus { outline: none; border-color: var(--sage); background: #fff; box-shadow: 0 0 0 3px rgba(122,158,142,0.15); }
+.form-row .hint { font-size: 10px; color: var(--text3); }
+.dur-row { display: flex; gap: 8px; }
+.dur-row input { flex: 1; }
+.dur-unit { padding: 10px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 14px; background: var(--bg); color: var(--text2); white-space: nowrap; }
+
+/* COST ITEMS */
+.cost-item { display: grid; grid-template-columns: 1fr 148px 28px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.cost-item input { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 14px; font-family: inherit; background: var(--bg); color: var(--text); transition: all 0.15s; width: 100%; }
+.cost-item input:focus { outline: none; border-color: var(--sage); background: #fff; box-shadow: 0 0 0 3px rgba(122,158,142,0.15); }
+.cost-item input[type="number"] { font-family: 'DM Mono', monospace; }
+.cost-hdr { font-size: 11px; font-weight: 600; color: var(--text2); padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.cost-hdr .sub { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; }
+.cost-footer { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; text-align: right; color: var(--sage-dk); padding-top: 8px; border-top: 1px solid var(--border); margin-top: 6px; }
+
+/* RESULT GROUPS */
+.rg-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.pill { padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.pill-s { background: var(--sage-bg); color: var(--sage-dk); }
+.pill-c { background: var(--pink-lt); color: var(--pink-dk); }
+
+/* STAT CARDS */
+.stat-card { background: var(--card); border-radius: var(--r); padding: 16px 18px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 3px; }
+.stat-label { font-size: 12px; font-weight: 600; color: var(--text2); line-height: 1.3; }
+.stat-value { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--text); line-height: 1.25; margin-top: 2px; }
+.stat-value.sm    { font-size: 16px; }
+.stat-value.green { color: var(--sage-dk); }
+.stat-value.warn  { color: var(--warn); }
+.stat-value.red   { color: var(--danger); }
+.stat-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.stat-card.sys    { background: var(--sage-bg); border-color: var(--sage-lt); }
+.stat-card.sys    .stat-label { color: var(--sage-dk); }
+.stat-card.sys    .stat-value { color: var(--sage-dk); font-size: 24px; }
+.stat-card.sys-p  { background: var(--sage-dk); border-color: var(--sage-dk); }
+.stat-card.sys-p  .stat-label { color: rgba(255,255,255,0.65); }
+.stat-card.sys-p  .stat-value { color: #fff; font-size: 26px; }
+.stat-card.sys-p  .stat-sub   { color: rgba(255,255,255,0.5); }
+.stat-card.calc   { background: var(--pink-bg); border-color: var(--pink-lt); }
+.stat-card.calc   .stat-label { color: var(--pink-dk); }
+
+/* PROGRESS */
+.prog-track { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 7px; }
+.prog-fill  { height: 100%; border-radius: 3px; background: var(--sage); transition: width 0.5s; }
+.prog-fill.warn   { background: var(--warn); }
+.prog-fill.danger { background: var(--danger); }
+
+/* SCENARIO BTNS */
+.sc-btn { padding: 5px 13px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1.5px solid transparent; font-family: inherit; background: var(--bg2); color: var(--text2); transition: all 0.15s; }
+.sc-btn.active { background: var(--sage-dk); color: #fff; border-color: var(--sage-dk); }
+.sc-btn:hover:not(.active) { border-color: var(--sage-lt); }
+
+/* MODE PANELS */
+.mode-panel { display: none; }
+.mode-panel.active { display: block; }
+
+/* TABLE */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { background: var(--bg2); padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg); }
+.td-mono  { font-family: 'DM Mono', monospace; font-size: 13px; }
+.td-g { color: var(--sage-dk); font-weight: 600; }
+.td-r { color: var(--danger); font-weight: 600; }
+.tr-be td { background: var(--sage-bg) !important; }
+.tr-be td:first-child { border-left: 3px solid var(--sage); padding-left: 9px; }
+
+/* SUGGESTIONS */
+.sug { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-radius: var(--r-sm); font-size: 12px; line-height: 1.55; margin-bottom: 8px; border-left: 3px solid transparent; }
+.sug:last-child { margin-bottom: 0; }
+.sug.ok   { background: var(--sage-bg); border-color: var(--sage); }
+.sug.warn { background: #fff7ed; border-color: var(--warn); }
+.sug.info { background: var(--pink-bg); border-color: var(--pink); }
+.sug-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.sug-dot.ok   { background: var(--sage); }
+.sug-dot.warn { background: var(--warn); }
+.sug-dot.info { background: var(--pink-dk); }
+
+/* QUICK BOX */
+.qbox { background: var(--pink-bg); border-radius: var(--r-sm); padding: 13px; border: 1px solid var(--pink-lt); }
+.qbox-title { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 9px; }
+.qbox-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
+.qlbl { font-size: 10px; color: var(--text3); }
+.qval { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--text); }
+
+/* TOAST */
+#toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; pointer-events: none; background: var(--text); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 12px; opacity: 0; transition: opacity 0.25s; max-width: 260px; }
+
+/* RESPONSIVE */
+@media(max-width:900px) { .g3,.g4 { grid-template-columns: 1fr 1fr; } }
+@media(max-width:640px) { .g2,.g3,.g4 { grid-template-columns: 1fr; } .page-header { height: auto; padding: 12px 14px; flex-direction: column; align-items: flex-start; } .container { padding: 14px 12px; } .cost-item { grid-template-columns: 1fr 110px 28px; } }
+@media print { .page-header,.btn,.btn-add,.btn-del { display: none !important; } .card { box-shadow: none; break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="page-header">
+  <div class="header-brand">
+    <h1>活動遊程定價試算器</h1>
+    <p>即時估算成本結構、保本點與建議售價</p>
+  </div>
+  <div class="header-right">
+    <div class="saved-chips" id="savedChips"></div>
+    <div class="hd" id="chipsDivider" style="display:none"></div>
+    <button class="btn btn-white" onclick="savePlan()">儲存方案</button>
+    <button class="btn btn-white" onclick="exportCSV()">匯出 CSV</button>
+    <button class="btn btn-white" onclick="window.print()">列印</button>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ═══ 1. 基本資料 ═══ -->
+<section>
+  <div class="sec-lbl">基本資料</div>
+  <div class="card">
+    <div class="g2">
+      <div class="form-row">
+        <label>活動名稱</label>
+        <input type="text" id="activityName" value="台南運河一日小旅行" oninput="calc()">
+      </div>
+      <div class="form-row">
+        <label>活動類型</label>
+        <select id="activityType" onchange="calc()">
+          <option value="halfday">半日小旅行</option>
+          <option value="fullday" selected>一日小旅行</option>
+          <option value="custom">客製包團</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>活動時長</label>
+        <div class="dur-row">
+          <input type="number" id="durationHours" value="6" min="0.5" step="0.5" oninput="calc()">
+          <div class="dur-unit">小時</div>
+        </div>
+        <div class="hint">半日約 3 小時，含午餐一日約 6 小時，全日約 8 小時</div>
+      </div>
+      <div class="form-row">
+        <label>定價模式</label>
+        <select id="pricingMode" onchange="switchMode()">
+          <option value="per_person">每人定價</option>
+          <option value="group">包團定價</option>
+          <option value="group_plus">包團 + 超出人頭加價</option>
+          <option value="tier">階梯式定價</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>最低成團人數</label>
+        <input type="number" id="minPax" value="6" min="1" oninput="calc()">
+      </div>
+      <div class="form-row">
+        <label>滿團人數</label>
+        <input type="number" id="maxPax" value="16" min="1" oninput="calc()">
+      </div>
+      <div class="form-row">
+        <label>試算基準人數</label>
+        <input type="number" id="expectedPax" value="10" min="1" oninput="calc()">
+        <div class="hint">預估出發人數，用於「一般情境」的試算</div>
+      </div>
+      <div class="form-row">
+        <label>目標利潤率（%）</label>
+        <input type="number" id="targetMargin" value="20" min="0" max="100" oninput="calc()">
+        <div class="hint">建議售價 = 保本價 ÷ (1 − 利潤率%)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 2. 成本輸入 ═══ -->
+<section>
+  <div class="sec-lbl">成本輸入</div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">每場固定支出</div>
+      <div class="cost-hdr">
+        <span>不隨人數變動的費用</span>
+        <span class="sub" id="fixedSub" style="color:var(--sage-dk)">NT$ 0</span>
+      </div>
+      <div id="fixedCosts"></div>
+      <button class="btn-add" onclick="addCostRow('fixedCosts','fixed')">+ 新增項目</button>
+      <div class="cost-footer" id="fixedTotal">合計：NT$ 0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">每人變動成本</div>
+      <div class="cost-hdr">
+        <span>每位參與者的個別費用</span>
+        <span class="sub" id="variableSub" style="color:var(--sage-dk)">NT$ 0 / 人</span>
+      </div>
+      <div id="variableCosts"></div>
+      <button class="btn-add" onclick="addCostRow('variableCosts','variable')">+ 新增項目</button>
+      <div class="divider"></div>
+      <div class="qbox">
+        <div class="qbox-title">以試算基準人數換算</div>
+        <div class="qbox-grid">
+          <div><div class="qlbl">每人變動成本</div><div class="qval" id="qVarPP">NT$ 0</div></div>
+          <div><div class="qlbl">× <span id="qPax">10</span> 人</div><div class="qval" id="qVarTotal">NT$ 0</div></div>
+          <div><div class="qlbl">占總成本</div><div class="qval" id="qVarRatio" style="color:var(--sage-dk)">0%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3. 定價策略 ═══ -->
+<section>
+  <div class="sec-lbl">定價策略</div>
+  <div class="card">
+    <div id="mode-per_person" class="mode-panel active">
+      <div class="g2">
+        <div class="form-row">
+          <label>手動設定每人售價（NT$，填 0 使用系統建議）</label>
+          <input type="number" id="manualPP" value="0" min="0" oninput="calc()">
+        </div>
+      </div>
+    </div>
+    <div id="mode-group" class="mode-panel">
+      <div class="g2">
+        <div class="form-row">
+          <label>包團總價（NT$，填 0 使用系統建議）</label>
+          <input type="number" id="manualGroup" value="0" min="0" oninput="calc()">
+        </div>
+      </div>
+    </div>
+    <div id="mode-group_plus" class="mode-panel">
+      <div class="g3">
+        <div class="form-row"><label>基本包含人數</label><input type="number" id="gpBaseCount" value="8" min="1" oninput="calc()"></div>
+        <div class="form-row"><label>基本包團費（NT$）</label><input type="number" id="gpBaseFee" value="20000" min="0" oninput="calc()"></div>
+        <div class="form-row"><label>超出每人加價（NT$）</label><input type="number" id="gpExtra" value="1200" min="0" oninput="calc()"></div>
+      </div>
+    </div>
+    <div id="mode-tier" class="mode-panel">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">依人數區間設定每人售價（區間外套用系統建議）</div>
+      <div id="tierRows"></div>
+      <button class="btn-add" onclick="addTierRow()">+ 新增區間</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 4. 試算結果 ═══ -->
+<section>
+  <div class="sec-lbl">試算結果</div>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--text2);font-weight:600">情境：</span>
+    <button class="sc-btn" onclick="setScenario('optimistic',this)">樂觀（滿團）</button>
+    <button class="sc-btn active" onclick="setScenario('normal',this)">一般（預計人數）</button>
+    <button class="sc-btn" onclick="setScenario('conservative',this)">保守（最低成團）</button>
+    <span id="scenarioNote" style="font-size:11px;color:var(--text3)"></span>
+  </div>
+
+  <!-- 系統建議 -->
+  <div style="margin-bottom:12px">
+    <div class="rg-lbl"><span class="pill pill-s">系統建議</span>根據成本與目標利潤計算出的定價建議</div>
+    <div class="g3">
+      <div class="stat-card sys-p">
+        <div class="stat-label">建議每人售價</div>
+        <div class="stat-value" id="r-sugPrice">NT$ 0</div>
+        <div class="stat-sub" id="r-sugSub">含 20% 利潤目標</div>
+      </div>
+      <div class="stat-card sys">
+        <div class="stat-label">保本每人售價</div>
+        <div class="stat-value warn" id="r-beakPrice">NT$ 0</div>
+        <div class="stat-sub" id="r-beakSub">以最低成團人數計算</div>
+      </div>
+      <div class="stat-card sys">
+        <div class="stat-label">需達保本的最低人數</div>
+        <div class="stat-value warn" id="r-beakNum">— 人</div>
+        <div class="stat-sub" id="r-beakNumSub">以目前售價試算</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 試算結果 -->
+  <div>
+    <div class="rg-lbl"><span class="pill pill-c">試算結果</span>以目前情境人數模擬的預估數字</div>
+    <div class="g3" style="margin-bottom:12px">
+      <div class="stat-card calc">
+        <div class="stat-label">總成本</div>
+        <div class="stat-value" id="r-totalCost">NT$ 0</div>
+        <div class="stat-sub" id="r-totalCostSub"></div>
+      </div>
+      <div class="stat-card calc">
+        <div class="stat-label">預估總收入</div>
+        <div class="stat-value green" id="r-revenue">NT$ 0</div>
+        <div class="stat-sub" id="r-revSub"></div>
+      </div>
+      <div class="stat-card calc">
+        <div class="stat-label">預估毛利</div>
+        <div class="stat-value" id="r-profit">NT$ 0</div>
+        <div class="stat-sub" id="r-profitSub"></div>
+      </div>
+    </div>
+    <div class="g4">
+      <div class="stat-card">
+        <div class="stat-label">利潤率</div>
+        <div class="stat-value sm" id="r-margin">0%</div>
+        <div class="prog-track"><div class="prog-fill" id="r-marginBar" style="width:0%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">固定成本</div>
+        <div class="stat-value sm" id="r-fixed">NT$ 0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">變動成本合計</div>
+        <div class="stat-value sm" id="r-variable">NT$ 0</div>
+        <div class="stat-sub" id="r-variableSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">滿團利潤</div>
+        <div class="stat-value sm green" id="r-fullProfit">NT$ 0</div>
+        <div class="stat-sub" id="r-fullProfitSub"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5. 圖表 ═══ -->
+<section>
+  <div class="sec-lbl">視覺分析</div>
+  <div class="g2">
+    <div class="card"><div class="card-title">成本結構</div><canvas id="chartDonut" style="max-height:260px"></canvas></div>
+    <div class="card"><div class="card-title">損益折線（依人數）</div><canvas id="chartLine" style="max-height:260px"></canvas></div>
+  </div>
+  <div class="g2" style="margin-top:14px">
+    <div class="card"><div class="card-title">各項成本明細</div><canvas id="chartBar" style="max-height:260px"></canvas></div>
+    <div class="card"><div class="card-title">每人均攤成本 vs 每人收入</div><canvas id="chartUnit" style="max-height:260px"></canvas></div>
+  </div>
+</section>
+
+<!-- ═══ 6. 人數模擬 ═══ -->
+<section>
+  <div class="sec-lbl">人數模擬</div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>人數</th><th>總成本</th><th>每人均攤成本</th><th>每人收入</th><th>總收入</th><th>毛利</th><th>利潤率</th><th>狀態</th>
+        </tr>
+      </thead>
+      <tbody id="simBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ 7. 建議 ═══ -->
+<section>
+  <div class="sec-lbl">分析建議</div>
+  <div class="card"><div id="suggestionList"></div></div>
+</section>
+
+<!-- ═══ 8. 匯出 ═══ -->
+<section>
+  <div class="sec-lbl">匯出與儲存</div>
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="exportCSV()">匯出 CSV</button>
+      <button class="btn btn-ghost" onclick="window.print()">列印 / 存 PDF</button>
+      <button class="btn btn-ghost" onclick="savePlan()">儲存方案</button>
+    </div>
+  </div>
+</section>
+
+</div><!-- /container -->
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// ALL JS IN GLOBAL SCOPE — onclick attributes need access
+// ════════════════════════════════════════════════════════
+
+// ── STATE ──────────────────────────────────────────────
+var APP = {
+  costs:           { fixed: [], variable: [] },
+  tiers:           [],
+  scenario:        'normal',
+  charts:          {},
+  chartsReady:     false,
+  savedPlans:      {}
+};
+
+// ── BOOT ───────────────────────────────────────────────
+// Chart.js is in <head> (sync), DOM is ready when this script runs
+// (script is at end of body). Safe to call directly.
+window.addEventListener('DOMContentLoaded', function() {
+  // Load saved plans
+  try {
+    var raw = localStorage.getItem('apd_plans_v4');
+    if (raw) APP.savedPlans = JSON.parse(raw);
+  } catch(e) { APP.savedPlans = {}; }
+
+  renderSavedChips();
+  initCharts();
+  APP.chartsReady = true;
+  loadDefaultData();
+});
+
+// ── DEFAULT DATA ────────────────────────────────────────
+function loadDefaultData() {
+  clearCosts();
+  gv('activityName').value  = '台南運河一日小旅行';
+  gv('activityType').value  = 'fullday';
+  gv('durationHours').value = '6';
+  gv('minPax').value        = '6';
+  gv('maxPax').value        = '16';
+  gv('expectedPax').value   = '10';
+  gv('targetMargin').value  = '20';
+  gv('pricingMode').value   = 'per_person';
+  switchMode();
+  var fd = [['領隊費',3000],['行政費',500],['攝影費',2000],['行銷費',600],['器材費',800]];
+  var vd = [['午餐',350],['保險',80],['門票',120],['紀念品',150]];
+  for (var i=0;i<fd.length;i++) addCostRow('fixedCosts','fixed',fd[i][0],fd[i][1]);
+  for (var j=0;j<vd.length;j++) addCostRow('variableCosts','variable',vd[j][0],vd[j][1]);
+  calc();
+}
+
+// ── HELPERS ────────────────────────────────────────────
+function gv(id) { return document.getElementById(id); }
+function gval(id) { var el = gv(id); return el ? el.value : ''; }
+function stext(id, val) { var el = gv(id); if (el) el.textContent = val; }
+function fmt(n) { return Number(n).toLocaleString('zh-TW'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function toast(msg) {
+  var el = gv('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.style.opacity = '0'; }, 2400);
+}
+
+// ── COST ROWS ──────────────────────────────────────────
+function addCostRow(cid, type, name, amt) {
+  name = name || '';
+  amt  = parseFloat(amt) || 0;
+  var id = 'cr' + Date.now() + Math.floor(Math.random()*9999);
+  APP.costs[type].push({ id:id, name:name, amt:amt });
+
+  var row = document.createElement('div');
+  row.className = 'cost-item';
+  row.id = id;
+  row.innerHTML =
+    '<input type="text" value="' + esc(name) + '" placeholder="成本項目名稱" ' +
+      'oninput="updateCost(\'' + type + '\',\'' + id + '\',\'name\',this.value)">' +
+    '<input type="number" value="' + (amt||'') + '" min="0" placeholder="金額（NT$）" ' +
+      'oninput="updateCost(\'' + type + '\',\'' + id + '\',\'amt\',parseFloat(this.value)||0)">' +
+    '<button class="btn-del" onclick="removeCost(\'' + cid + '\',\'' + type + '\',\'' + id + '\')">&#215;</button>';
+
+  var container = gv(cid);
+  if (container) container.appendChild(row);
+  calc();
+}
+
+function updateCost(type, id, field, val) {
+  var list = APP.costs[type];
+  for (var i=0;i<list.length;i++) {
+    if (list[i].id === id) { list[i][field] = val; break; }
+  }
+  calc();
+}
+
+function removeCost(cid, type, id) {
+  var list = APP.costs[type];
+  var next = [];
+  for (var i=0;i<list.length;i++) { if (list[i].id !== id) next.push(list[i]); }
+  APP.costs[type] = next;
+  var el = gv(id); if (el) el.parentNode.removeChild(el);
+  calc();
+}
+
+function sumType(type) {
+  var list = APP.costs[type]; var s = 0;
+  for (var i=0;i<list.length;i++) s += (list[i].amt||0);
+  return s;
+}
+
+function clearCosts() {
+  var fc=gv('fixedCosts'), vc=gv('variableCosts'), tr=gv('tierRows');
+  if(fc) fc.innerHTML=''; if(vc) vc.innerHTML=''; if(tr) tr.innerHTML='';
+  APP.costs = { fixed:[], variable:[] };
+  APP.tiers = [];
+}
+
+// ── TIERS ──────────────────────────────────────────────
+function addTierRow(mn, mx, pr) {
+  APP.tiers.push({ min:parseFloat(mn)||0, max:parseFloat(mx)||0, price:parseFloat(pr)||0 });
+  renderTiers(); calc();
+}
+
+function renderTiers() {
+  var c = gv('tierRows'); if (!c) return;
+  c.innerHTML = '';
+  var st = 'padding:9px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;background:var(--bg);width:100%';
+  for (var i=0;i<APP.tiers.length;i++) {
+    var t = APP.tiers[i];
+    var d = document.createElement('div');
+    d.style.cssText = 'display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px';
+    d.innerHTML =
+      '<span style="font-size:11px;color:var(--text2);white-space:nowrap">區間 '+(i+1)+'</span>'+
+      '<input type="number" value="'+t.min+'" placeholder="最少人數" style="'+st+'" oninput="APP.tiers['+i+'].min=parseFloat(this.value)||0;calc()">'+
+      '<input type="number" value="'+t.max+'" placeholder="最多人數" style="'+st+'" oninput="APP.tiers['+i+'].max=parseFloat(this.value)||0;calc()">'+
+      '<input type="number" value="'+t.price+'" placeholder="每人售價" style="'+st+'" oninput="APP.tiers['+i+'].price=parseFloat(this.value)||0;calc()">'+
+      '<button class="btn-del" onclick="APP.tiers.splice('+i+',1);renderTiers();calc()">&#215;</button>';
+    c.appendChild(d);
+  }
+}
+
+// ── PRICING CORE ───────────────────────────────────────
+// Single source of truth for revenue calculation
+function computeRevenue(pax, suggestedPP) {
+  var mode = gval('pricingMode');
+  var revenue = 0;
+
+  if (mode === 'per_person') {
+    var m = parseFloat(gval('manualPP'))||0;
+    revenue = (m > 0 ? m : suggestedPP) * pax;
+
+  } else if (mode === 'group') {
+    var mg = parseFloat(gval('manualGroup'))||0;
+    revenue = mg > 0 ? mg : suggestedPP * pax;
+
+  } else if (mode === 'group_plus') {
+    var base = parseFloat(gval('gpBaseFee'))||0;
+    var bc   = parseFloat(gval('gpBaseCount'))||1;
+    var ex   = parseFloat(gval('gpExtra'))||0;
+    revenue  = base + Math.max(0, pax-bc) * ex;
+
+  } else if (mode === 'tier') {
+    var found = null;
+    for (var i=0;i<APP.tiers.length;i++) {
+      if (pax>=APP.tiers[i].min && pax<=APP.tiers[i].max) { found=APP.tiers[i]; break; }
+    }
+    revenue = (found ? found.price : suggestedPP) * pax;
+
+  } else {
+    revenue = suggestedPP * pax;
+  }
+
+  return { revenue: revenue, pp: pax > 0 ? revenue/pax : 0 };
+}
+
+// ── SCENARIO ───────────────────────────────────────────
+function setScenario(s, el) {
+  APP.scenario = s;
+  var btns = document.querySelectorAll('.sc-btn');
+  for (var i=0;i<btns.length;i++) btns[i].classList.remove('active');
+  el.classList.add('active');
+  calc();
+}
+
+function getScenarioPax() {
+  var min = parseInt(gval('minPax'))||1;
+  var max = parseInt(gval('maxPax'))||min;
+  var exp = parseInt(gval('expectedPax'))||min;
+  if (APP.scenario === 'optimistic')   return max;
+  if (APP.scenario === 'conservative') return min;
+  return exp;
+}
+
+function switchMode() {
+  var mode = gval('pricingMode');
+  var panels = document.querySelectorAll('.mode-panel');
+  for (var i=0;i<panels.length;i++) panels[i].classList.remove('active');
+  var p = gv('mode-'+mode); if (p) p.classList.add('active');
+  calc();
+}
+
+// ── MAIN CALC ──────────────────────────────────────────
+function calc() {
+  var fixed   = sumType('fixed');
+  var varPP   = sumType('variable');
+  var minPax  = parseInt(gval('minPax'))||1;
+  var maxPax  = parseInt(gval('maxPax'))||minPax;
+  var tm      = (parseFloat(gval('targetMargin'))||20)/100;
+  var pax     = getScenarioPax();
+
+  // Core formulas
+  var totalCost   = fixed + varPP * pax;
+  var beakPP      = minPax > 0 ? fixed/minPax + varPP : 0;  // breakeven price per person
+  var sugPP       = tm < 1 ? beakPP/(1-tm) : beakPP*1.3;   // suggested price per person
+
+  var res     = computeRevenue(pax, sugPP);
+  var revenue = res.revenue;
+  var ppSell  = res.pp;
+  var profit  = revenue - totalCost;
+  var margin  = revenue > 0 ? profit/revenue : 0;
+
+  // Breakeven pax count at current sell price
+  var beakN = (ppSell - varPP) > 0 ? Math.ceil(fixed/(ppSell-varPP)) : Infinity;
+
+  // Full-team numbers
+  var fullRes    = computeRevenue(maxPax, sugPP);
+  var fullProfit = fullRes.revenue - (fixed + varPP*maxPax);
+
+  // ── Cost input panel subtotals
+  stext('fixedSub',    'NT$ ' + fmt(fixed));
+  stext('fixedTotal',  '合計：NT$ ' + fmt(fixed));
+  stext('variableSub', 'NT$ ' + fmt(varPP) + ' / 人');
+  stext('qVarPP',      'NT$ ' + fmt(varPP));
+  stext('qPax',        pax);
+  stext('qVarTotal',   'NT$ ' + fmt(varPP*pax));
+  stext('qVarRatio',   totalCost > 0 ? Math.round(varPP*pax/totalCost*100)+'%' : '0%');
+
+  // ── Group A: 系統建議
+  stext('r-sugPrice',   'NT$ ' + fmt(Math.ceil(sugPP)));
+  stext('r-sugSub',     '含 '+Math.round(tm*100)+'% 利潤目標，以最低 '+minPax+' 人計算');
+  stext('r-beakPrice',  'NT$ ' + fmt(Math.ceil(beakPP)));
+  stext('r-beakSub',    '最低成團 '+minPax+' 人時的成本線');
+  stext('r-beakNum',    isFinite(beakN) ? beakN+' 人' : '無法保本');
+  stext('r-beakNumSub', isFinite(beakN) ? '以每人售 NT$ '+fmt(Math.ceil(ppSell))+' 試算' : '售價低於每人變動成本');
+
+  // ── Group B: 試算結果
+  stext('r-totalCost',    'NT$ ' + fmt(Math.round(totalCost)));
+  stext('r-totalCostSub', '固定 '+fmt(fixed)+' + 變動 '+fmt(varPP*pax)+'（'+pax+'人）');
+
+  var revEl = gv('r-revenue');
+  if (revEl) revEl.textContent = 'NT$ ' + fmt(Math.round(revenue));
+  stext('r-revSub', pax+' 人 × NT$ '+fmt(Math.round(ppSell)));
+
+  var profEl = gv('r-profit');
+  if (profEl) { profEl.textContent = 'NT$ '+fmt(Math.round(profit)); profEl.className = 'stat-value '+(profit>=0?'green':'red'); }
+  stext('r-profitSub', profit >= 0 ? '獲利' : '虧損');
+
+  var mgEl = gv('r-margin');
+  if (mgEl) { mgEl.textContent = (margin*100).toFixed(1)+'%'; mgEl.className = 'stat-value sm '+(margin>=tm?'green':margin>=0?'warn':'red'); }
+
+  var barEl = gv('r-marginBar');
+  if (barEl) { barEl.style.width = Math.min(100,Math.max(0,margin*100))+'%'; barEl.className = 'prog-fill'+(margin<0?' danger':margin<tm?' warn':''); }
+
+  stext('r-fixed',       'NT$ '+fmt(fixed));
+  stext('r-variable',    'NT$ '+fmt(Math.round(varPP*pax)));
+  stext('r-variableSub', 'NT$ '+fmt(varPP)+' × '+pax+' 人');
+
+  var fpEl = gv('r-fullProfit');
+  if (fpEl) { fpEl.textContent = 'NT$ '+fmt(Math.round(fullProfit)); fpEl.className = 'stat-value sm '+(fullProfit>=0?'green':'red'); }
+  stext('r-fullProfitSub', maxPax+' 人滿團');
+
+  var notes = { optimistic:'樂觀情境，以滿團 '+maxPax+' 人計算', normal:'一般情境，以 '+pax+' 人計算', conservative:'保守情境，以最低成團 '+minPax+' 人計算' };
+  stext('scenarioNote', notes[APP.scenario]||'');
+
+  // Update charts + table + suggestions
+  if (APP.chartsReady) updateCharts(fixed, varPP, minPax, maxPax, sugPP, pax);
+  updateSimTable(fixed, varPP, minPax, maxPax, sugPP, beakN);
+  updateSuggestions(fixed, varPP, totalCost, beakPP, ppSell, pax, minPax, maxPax, margin, beakN, tm);
+}
+
+// ── CHARTS ─────────────────────────────────────────────
+function initCharts() {
+  var fn = { family:'Noto Sans TC', size:11 };
+  var fm = { family:'DM Mono', size:11 };
+  var gc = '#e8ddd7';
+  var leg = { position:'bottom', labels:{ font:fn, boxWidth:10, padding:12, color:'#7a6a60' } };
+  var nt = function(v) { var a=Math.abs(v); return a>=10000?(v/10000).toFixed(0)+'萬':a>=1000?(v/1000).toFixed(0)+'K':v; };
+
+  APP.charts.donut = new Chart(gv('chartDonut'), {
+    type: 'doughnut',
+    data: { labels:['固定成本','變動成本'], datasets:[{ data:[1,1], backgroundColor:['#7a9e8e','#e8b4a0'], borderWidth:0, hoverOffset:6 }] },
+    options: { responsive:true, cutout:'62%', plugins:{ legend:leg, tooltip:{ callbacks:{ label:function(c){ return ' '+c.label+'：NT$ '+fmt(c.raw); } } } } }
+  });
+
+  APP.charts.line = new Chart(gv('chartLine'), {
+    type: 'line',
+    data: { labels:[], datasets:[
+      { label:'總收入', data:[], borderColor:'#7a9e8e', backgroundColor:'rgba(122,158,142,0.1)', tension:0.35, fill:true, pointRadius:3 },
+      { label:'總成本', data:[], borderColor:'#e8b4a0', backgroundColor:'rgba(232,180,160,0.1)', tension:0.35, fill:true, pointRadius:3 },
+      { label:'利潤',   data:[], borderColor:'#c8836a', borderDash:[5,3], tension:0.35, fill:false, pointRadius:3 }
+    ]},
+    options: { responsive:true,
+      plugins:{ legend:leg, tooltip:{ callbacks:{ label:function(c){ return ' '+c.dataset.label+'：NT$ '+fmt(Math.round(c.raw)); } } } },
+      scales:{ x:{ ticks:{ font:fn, color:'#b0a098', callback:function(v,i,a){ return a[i].value+'人'; } }, grid:{color:gc} },
+               y:{ ticks:{ font:fm, color:'#b0a098', callback:nt }, grid:{color:gc} } } }
+  });
+
+  APP.charts.bar = new Chart(gv('chartBar'), {
+    type: 'bar',
+    data: { labels:[], datasets:[{ label:'金額', data:[], backgroundColor:'#c8ddd5', borderRadius:4, borderSkipped:false }] },
+    options: { responsive:true, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return ' NT$ '+fmt(c.raw); } } } },
+      scales:{ x:{ ticks:{ font:fm, color:'#b0a098', callback:nt }, grid:{color:gc} },
+               y:{ ticks:{ font:fn, color:'#7a6a60' }, grid:{display:false} } } }
+  });
+
+  APP.charts.unit = new Chart(gv('chartUnit'), {
+    type: 'line',
+    data: { labels:[], datasets:[
+      { label:'每人均攤成本', data:[], borderColor:'#e8b4a0', tension:0.35, pointRadius:3, fill:false },
+      { label:'每人收入',     data:[], borderColor:'#7a9e8e',  tension:0.35, pointRadius:3, fill:false }
+    ]},
+    options: { responsive:true,
+      plugins:{ legend:leg, tooltip:{ callbacks:{ label:function(c){ return ' '+c.dataset.label+'：NT$ '+fmt(Math.round(c.raw)); } } } },
+      scales:{ x:{ ticks:{ font:fn, color:'#b0a098', callback:function(v,i,a){ return a[i].value+'人'; } }, grid:{color:gc} },
+               y:{ ticks:{ font:fm, color:'#b0a098', callback:nt }, grid:{color:gc} } } }
+  });
+}
+
+function updateCharts(fixed, varPP, minPax, maxPax, sugPP, scenarioPax) {
+  // Donut
+  APP.charts.donut.data.datasets[0].data = [fixed, varPP*scenarioPax];
+  APP.charts.donut.update('none');
+
+  // Line + Unit — same computeRevenue() as table
+  var lbls=[],revs=[],csts=[],prfs=[],ucsts=[],urevs=[];
+  var start = Math.max(1, minPax-1);
+  var end   = maxPax + 1;
+  for (var p=start;p<=end;p++) {
+    var cost = fixed + varPP*p;
+    var r    = computeRevenue(p, sugPP);
+    lbls.push(p);
+    csts.push(Math.round(cost));
+    revs.push(Math.round(r.revenue));
+    prfs.push(Math.round(r.revenue-cost));
+    ucsts.push(Math.round(cost/p));
+    urevs.push(Math.round(r.pp));
+  }
+  APP.charts.line.data.labels = lbls;
+  APP.charts.line.data.datasets[0].data = revs;
+  APP.charts.line.data.datasets[1].data = csts;
+  APP.charts.line.data.datasets[2].data = prfs;
+  APP.charts.line.update('none');
+
+  APP.charts.unit.data.labels = lbls;
+  APP.charts.unit.data.datasets[0].data = ucsts;
+  APP.charts.unit.data.datasets[1].data = urevs;
+  APP.charts.unit.update('none');
+
+  // Bar — all cost items sorted by size
+  var items = [];
+  var fc = APP.costs.fixed;   for (var a=0;a<fc.length;a++) { if(fc[a].amt>0)   items.push({ name:fc[a].name||'固定項目',   amt:fc[a].amt }); }
+  var vc = APP.costs.variable; for (var b=0;b<vc.length;b++) { if(vc[b].amt>0) items.push({ name:(vc[b].name||'變動項目')+'(×'+scenarioPax+')', amt:vc[b].amt*scenarioPax }); }
+  items.sort(function(a,b){ return b.amt-a.amt; }); if(items.length>10) items=items.slice(0,10);
+
+  APP.charts.bar.data.labels = items.map(function(i){ return i.name; });
+  APP.charts.bar.data.datasets[0].data = items.map(function(i){ return Math.round(i.amt); });
+  APP.charts.bar.update('none');
+}
+
+// ── SIMULATION TABLE ───────────────────────────────────
+function updateSimTable(fixed, varPP, minPax, maxPax, sugPP, beakN) {
+  var tbody = gv('simBody'); if (!tbody) return;
+  tbody.innerHTML = '';
+  for (var p=minPax;p<=maxPax;p++) {
+    var cost   = fixed + varPP*p;
+    var r      = computeRevenue(p, sugPP);
+    var profit = r.revenue - cost;
+    var mg     = r.revenue > 0 ? profit/r.revenue*100 : 0;
+    var isBeak = isFinite(beakN) && p===beakN;
+
+    var tr = document.createElement('tr');
+    if (isBeak) tr.className = 'tr-be';
+
+    var stColor = profit<0?'var(--danger)':'var(--warn)';
+    var stText  = profit<0?'虧損':mg<5?'低利':mg<15?'偏低':'';
+    var stHtml  = stText ? '<span style="color:'+stColor+'">'+stText+'</span>' : '<span style="color:var(--sage-dk)">獲利</span>';
+    var bkLabel = isBeak ? ' <span style="color:var(--sage-dk);font-size:10px;font-weight:700">&#9664; 保本</span>' : '';
+
+    tr.innerHTML =
+      '<td><strong>'+p+' 人</strong>'+bkLabel+'</td>'+
+      '<td class="td-mono">NT$ '+fmt(Math.round(cost))+'</td>'+
+      '<td class="td-mono">NT$ '+fmt(Math.round(cost/p))+'</td>'+
+      '<td class="td-mono">NT$ '+fmt(Math.round(r.pp))+'</td>'+
+      '<td class="td-mono">NT$ '+fmt(Math.round(r.revenue))+'</td>'+
+      '<td class="td-mono '+(profit>=0?'td-g':'td-r')+'">NT$ '+fmt(Math.round(profit))+'</td>'+
+      '<td class="'+(mg>=0?'td-g':'td-r')+'">'+mg.toFixed(1)+'%</td>'+
+      '<td>'+stHtml+'</td>';
+    tbody.appendChild(tr);
+  }
+}
+
+// ── SUGGESTIONS ────────────────────────────────────────
+function updateSuggestions(fixed, varPP, totalCost, beakPP, ppSell, pax, minPax, maxPax, margin, beakN, tm) {
+  var list = gv('suggestionList'); if (!list) return;
+  list.innerHTML = '';
+  function add(type, text) {
+    var d = document.createElement('div');
+    d.className = 'sug '+type;
+    d.innerHTML = '<span class="sug-dot '+type+'"></span><span>'+text+'</span>';
+    list.appendChild(d);
+  }
+  if (ppSell < beakPP)
+    add('warn','每人售價（NT$ '+fmt(Math.ceil(ppSell))+'）低於保本價（NT$ '+fmt(Math.ceil(beakPP))+'），此場活動將虧損。');
+  if (margin < tm && ppSell >= beakPP)
+    add('warn','利潤率 '+(margin*100).toFixed(1)+'% 尚未達目標 '+Math.round(tm*100)+'%，可微調售價或成本。');
+  if (!isFinite(beakN) || beakN > maxPax)
+    add('warn','以此售價無法在滿團前達到保本，請提高售價或降低固定成本。');
+  if (totalCost > 0 && fixed/totalCost > 0.6)
+    add('info','固定成本占比 '+Math.round(fixed/totalCost*100)+'%，偏高。人數不足時虧損風險大，建議考慮包團定價轉移風險。');
+  if (maxPax - minPax >= 8)
+    add('info','人數區間跨度大（'+minPax+'－'+maxPax+' 人），建議採階梯定價：人少時價格略高，人多時給予優惠。');
+  var allC = APP.costs.fixed.concat(APP.costs.variable);
+  allC.sort(function(a,b){ return b.amt-a.amt; });
+  if (allC.length>0 && totalCost>0 && allC[0].amt/totalCost>0.3)
+    add('info','「'+allC[0].name+'」占總成本 '+Math.round(allC[0].amt/totalCost*100)+'%，是最高占比項目，建議評估是否可壓縮。');
+  if (margin >= tm)
+    add('ok','定價健康，利潤率 '+(margin*100).toFixed(1)+'% 達標。建議同步規劃滿團備援方案。');
+  if (list.children.length === 0)
+    add('ok','所有指標正常，可進行推廣。');
+}
+
+// ── SAVED PLANS ────────────────────────────────────────
+function savePlan() {
+  var name = gval('activityName').trim();
+  if (!name) { toast('請先填寫活動名稱'); return; }
+  APP.savedPlans[name] = {
+    basic: {
+      activityName:  name,
+      activityType:  gval('activityType'),
+      durationHours: gval('durationHours'),
+      minPax:        gval('minPax'),
+      maxPax:        gval('maxPax'),
+      expectedPax:   gval('expectedPax'),
+      targetMargin:  gval('targetMargin'),
+      pricingMode:   gval('pricingMode'),
+      manualPP:      gval('manualPP'),
+      manualGroup:   gval('manualGroup'),
+      gpBaseCount:   gval('gpBaseCount'),
+      gpBaseFee:     gval('gpBaseFee'),
+      gpExtra:       gval('gpExtra')
+    },
+    costs: JSON.parse(JSON.stringify(APP.costs)),
+    tiers: JSON.parse(JSON.stringify(APP.tiers))
+  };
+  try { localStorage.setItem('apd_plans_v4', JSON.stringify(APP.savedPlans)); } catch(e) {}
+  renderSavedChips();
+  toast('「'+name+'」已儲存');
+}
+
+function loadPlan(name) {
+  var plan = APP.savedPlans[name]; if (!plan) return;
+  clearCosts();
+  if (plan.basic) {
+    var keys = Object.keys(plan.basic);
+    for (var i=0;i<keys.length;i++) {
+      var el = gv(keys[i]); if (el) el.value = plan.basic[keys[i]];
+    }
+  }
+  if (plan.costs) {
+    var fc=plan.costs.fixed||[], vc=plan.costs.variable||[];
+    for(var f=0;f<fc.length;f++) addCostRow('fixedCosts','fixed',fc[f].name,fc[f].amt);
+    for(var v=0;v<vc.length;v++) addCostRow('variableCosts','variable',vc[v].name,vc[v].amt);
+  }
+  if (plan.tiers) { APP.tiers=plan.tiers; renderTiers(); }
+  switchMode(); calc();
+  toast('已載入「'+name+'」');
+}
+
+function deletePlan(name, e) {
+  e.stopPropagation();
+  delete APP.savedPlans[name];
+  try { localStorage.setItem('apd_plans_v4', JSON.stringify(APP.savedPlans)); } catch(ex) {}
+  renderSavedChips();
+  toast('「'+name+'」已刪除');
+}
+
+function renderSavedChips() {
+  var c = gv('savedChips'), d = gv('chipsDivider');
+  if (!c) return;
+  c.innerHTML = '';
+  var names = Object.keys(APP.savedPlans);
+  if (d) d.style.display = names.length ? '' : 'none';
+  for (var i=0;i<names.length;i++) {
+    var n = names[i];
+    var chip = document.createElement('div');
+    chip.className = 'saved-chip';
+    chip.innerHTML =
+      '<span onclick="loadPlan(\''+esc(n)+'\')">'+esc(n)+'</span>'+
+      '<span class="saved-chip-del" onclick="deletePlan(\''+esc(n)+'\',event)">&#215;</span>';
+    c.appendChild(chip);
+  }
+}
+
+// ── EXPORT CSV ─────────────────────────────────────────
+function exportCSV() {
+  var fixed  = sumType('fixed');
+  var varPP  = sumType('variable');
+  var minPax = parseInt(gval('minPax'))||1;
+  var maxPax = parseInt(gval('maxPax'))||minPax;
+  var tm     = (parseFloat(gval('targetMargin'))||20)/100;
+  var beakPP = minPax > 0 ? fixed/minPax + varPP : 0;
+  var sugPP  = tm < 1 ? beakPP/(1-tm) : beakPP*1.3;
+
+  var rows = [['人數','總成本','每人均攤成本','每人收入','總收入','毛利','利潤率']];
+  for (var p=minPax;p<=maxPax;p++) {
+    var cost = fixed + varPP*p;
+    var r    = computeRevenue(p, sugPP);
+    var pf   = r.revenue - cost;
+    rows.push([p, Math.round(cost), Math.ceil(cost/p), Math.round(r.pp), Math.round(r.revenue), Math.round(pf),
+      r.revenue>0 ? (pf/r.revenue*100).toFixed(1)+'%' : '0%']);
+  }
+  var csv = '\uFEFF' + rows.map(function(r){ return r.join(','); }).join('\n');
+  try {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+    a.download = (gval('activityName')||'活動定價') + '_試算.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast('CSV 已匯出');
+  } catch(e) { toast('匯出失敗，請改用列印功能'); }
+}
+</script>
+</body>
+</html>
